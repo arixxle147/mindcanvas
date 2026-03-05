@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MindCanvas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+TC:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #f5f5f0;
+      --canvas-bg: #f0efe8;
+      --surface: #fff;
+      --surface2: #f5f5f0;
+      --border: #ddddd8;
+      --border2: #c8c8c0;
+      --accent: #5b5bd6;
+      --accent-hover: #4646c4;
+      --accent2: #e55353;
+      --text: #1a1a1a;
+      --text2: #888880;
+      --text3: #bbbbb0;
+      --shadow: rgba(0, 0, 0, 0.08);
+      --shadow2: rgba(0, 0, 0, 0.14);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .view {
+      display: none;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .view.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── AUTH SCREEN ── */
+    #auth-view {
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+    }
+
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 44px;
+      width: 380px;
+      box-shadow: 0 8px 40px var(--shadow2);
+      animation: slideUp .2s ease;
+    }
+
+    .auth-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .auth-tagline {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 32px;
+    }
+
+    .auth-label {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .auth-input {
+      width: 100%;
+      padding: 10px 13px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .12s;
+      margin-bottom: 14px;
+    }
+
+    .auth-input:focus {
+      border-color: var(--accent);
+    }
+
+    .auth-btn {
+      width: 100%;
+      padding: 11px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      margin-bottom: 10px;
+    }
+
+    .auth-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .auth-btn.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text2);
+    }
+
+    .auth-btn.secondary:hover {
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .auth-divider {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text3);
+      margin: 6px 0 14px;
+      position: relative;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 42%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .auth-divider::before {
+      left: 0;
+    }
+
+    .auth-divider::after {
+      right: 0;
+    }
+
+    .auth-google-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .auth-google-btn:hover {
+      border-color: var(--border2);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .auth-switch {
+      font-size: 12px;
+      color: var(--text2);
+      text-align: center;
+      margin-top: 18px;
+    }
+
+    .auth-switch a {
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .auth-switch a:hover {
+      text-decoration: underline;
+    }
+
+    .auth-error {
+      font-size: 12px;
+      color: var(--accent2);
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .auth-error.show {
+      display: block;
+    }
+
+    .auth-msg {
+      font-size: 12px;
+      color: #4caf50;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .auth-msg.show {
+      display: block;
+    }
+
+    /* ── DASHBOARD ── */
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      color: var(--accent);
+    }
+
+    .dash-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .user-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .btn-signout {
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text2);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .btn-signout:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .btn-new {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-new:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .dash-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 40px;
+    }
+
+    .dash-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .dash-sub {
+      color: var(--text2);
+      font-size: 13px;
+      margin-bottom: 28px;
+    }
+
+    .files-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .file-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all .15s;
+      position: relative;
+    }
+
+    .file-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px var(--shadow2);
+      transform: translateY(-2px);
+    }
+
+    .file-icon {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .file-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-meta {
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    .file-stats {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .file-stat {
+      font-size: 11px;
+      color: var(--text2);
+      background: var(--surface2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .file-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: none;
+      gap: 4px;
+    }
+
+    .file-card:hover .file-actions {
+      display: flex;
+    }
+
+    .btn-icon {
+      width: 26px;
+      height: 26px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all .12s;
+    }
+
+    .btn-icon:hover {
+      background: #fff0f0;
+      color: var(--accent2);
+      border-color: var(--accent2);
+    }
+
+    .empty-state {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text2);
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 14px;
+      opacity: .35;
+    }
+
+    .empty-state h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    /* ── CANVAS HEADER ── */
+    .canvas-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 22px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      flex-shrink: 0;
+      box-shadow: 0 1px 4px var(--shadow);
+    }
+
+    .btn-back {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text2);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .btn-back:hover {
+      color: var(--text);
+      border-color: var(--border2);
+    }
+
+    .canvas-file-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+      cursor: text;
+      padding: 4px 8px;
+      border-radius: 5px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text);
+      transition: all .12s;
+    }
+
+    .canvas-file-name:focus {
+      outline: none;
+      border-color: var(--border);
+      background: var(--surface2);
+    }
+
+    .canvas-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .save-status {
+      font-size: 11px;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .save-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4caf50;
+    }
+
+    .save-dot.saving {
+      background: #f59e0b;
+      animation: pulse 1s infinite;
+    }
+
+    .toolbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .12s;
+      white-space: nowrap;
+    }
+
+    .toolbar-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .toolbar-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── CANVAS ── */
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+      background: var(--canvas-bg);
+      background-image: radial-gradient(circle, #ccc 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .canvas-container.grabbing {
+      cursor: grabbing;
+    }
+
+    .canvas-container.connect-mode {
+      cursor: default;
+    }
+
+    #canvas-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    #canvas-world {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
+      z-index: 2;
+    }
+
+    /* ── CARDS ── */
+    .canvas-card {
+      position: absolute;
+      width: 200px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 2px 10px var(--shadow);
+      user-select: none;
+      transition: box-shadow .15s, border-color .15s;
+      z-index: 2;
+    }
+
+    .canvas-card:hover {
+      box-shadow: 0 4px 18px var(--shadow2);
+    }
+
+    .card-title-bar {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px 7px;
+      border-bottom: 1px solid var(--border);
+      cursor: move;
+      gap: 5px;
+    }
+
+    .card-collapse-btn {
+      width: 18px;
+      height: 18px;
+      background: transparent;
+      border: none;
+      border-radius: 3px;
+      color: var(--text2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: all .15s;
+      padding: 0;
+    }
+
+    .card-collapse-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .card-collapse-btn svg {
+      transition: transform .2s ease;
+    }
+
+    .canvas-card.collapsed .card-collapse-btn svg {
+      transform: rotate(-90deg);
+    }
+
+    .card-title-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: text;
+      min-width: 0;
+    }
+
+    .card-title-input::placeholder {
+      color: var(--text3);
+    }
+
+    .card-open-btn {
+      width: 20px;
+      height: 20px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      transition: all .1s;
+    }
+
+    .card-open-btn:hover {
+      background: var(--surface2);
+      color: var(--accent);
+    }
+
+    .card-content {
+      padding: 10px;
+      overflow: hidden;
+      transition: max-height .22s ease, padding .22s ease, opacity .18s ease;
+    }
+
+    .canvas-card.collapsed .card-content {
+      max-height: 0 !important;
+      padding-top: 0;
+      padding-bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .card-textarea {
+      width: 100%;
+      min-height: 72px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 12px;
+      line-height: 1.65;
+      resize: none;
+      cursor: text;
+      display: block;
+    }
+
+    .card-textarea::placeholder {
+      color: var(--text3);
+    }
+
+    .card-resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      cursor: nwse-resize;
+      z-index: 5;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 3px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+
+    .canvas-card:hover .card-resize-handle {
+      opacity: 1;
+    }
+
+    .edge-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #fff;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s, transform .12s;
+      z-index: 10;
+      cursor: crosshair;
+      transform: translate(-50%, -50%);
+    }
+
+    .edge-dot:hover {
+      transform: translate(-50%, -50%) scale(1.4);
+      background: var(--accent);
+    }
+
+    .canvas-card.show-dots .edge-dot {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .edge-dot.top {
+      top: 0;
+      left: 50%;
+    }
+
+    .edge-dot.bottom {
+      top: 100%;
+      left: 50%;
+    }
+
+    .edge-dot.left {
+      top: 50%;
+      left: 0;
+    }
+
+    .edge-dot.right {
+      top: 50%;
+      left: 100%;
+    }
+
+    /* ── SVG ── */
+    .conn-line {
+      stroke: var(--accent);
+      stroke-width: 1.8;
+      fill: none;
+      opacity: .5;
+      pointer-events: stroke;
+      cursor: pointer;
+      transition: opacity .12s, stroke-width .12s;
+    }
+
+    .conn-line:hover {
+      opacity: 1;
+      stroke-width: 2.5;
+      stroke: var(--accent2);
+    }
+
+    .conn-temp {
+      stroke: var(--accent);
+      stroke-width: 1.6;
+      fill: none;
+      stroke-dasharray: 5, 4;
+      pointer-events: none;
+      opacity: .7;
+    }
+
+    /* ── CONTEXT MENU ── */
+    #ctx-menu {
+      position: fixed;
+      z-index: 5000;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 28px var(--shadow2);
+      padding: 6px;
+      min-width: 170px;
+      display: none;
+      animation: fadeIn .1s ease;
+    }
+
+    #ctx-menu.open {
+      display: block;
+    }
+
+    .ctx-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      transition: background .1s;
+      white-space: nowrap;
+    }
+
+    .ctx-item:hover {
+      background: var(--surface2);
+    }
+
+    .ctx-item.danger {
+      color: var(--accent2);
+    }
+
+    .ctx-item.danger:hover {
+      background: #fff0f0;
+    }
+
+    .ctx-sep {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    .ctx-label {
+      padding: 5px 12px 2px;
+      font-size: 10px;
+      color: var(--text2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .ctx-colors {
+      display: flex;
+      gap: 5px;
+      padding: 6px 12px 8px;
+      flex-wrap: wrap;
+    }
+
+    .ctx-color-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform .1s, border-color .1s;
+    }
+
+    .ctx-color-swatch:hover {
+      transform: scale(1.25);
+    }
+
+    .ctx-color-swatch.active {
+      border-color: #555;
+    }
+
+    /* ── DOC MODAL ── */
+    #doc-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #doc-modal.open {
+      display: flex;
+    }
+
+    .doc-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(3px);
+    }
+
+    .doc-panel {
+      position: relative;
+      z-index: 1;
+      width: 740px;
+      max-width: 95vw;
+      height: 83vh;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+      animation: slideUp .18s ease;
+    }
+
+    .doc-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .doc-title-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .doc-title-input::placeholder {
+      color: var(--text3);
+    }
+
+    .doc-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 3px;
+    }
+
+    .doc-tab {
+      padding: 4px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text2);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .doc-tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .btn-close-doc {
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text2);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .12s;
+    }
+
+    .btn-close-doc:hover {
+      background: #fff0f0;
+      color: var(--accent2);
+      border-color: var(--accent2);
+    }
+
+    .doc-body {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .doc-editor,
+    .doc-preview {
+      position: absolute;
+      inset: 0;
+      padding: 22px 30px;
+      overflow-y: auto;
+    }
+
+    .doc-editor {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 14px;
+      line-height: 1.85;
+      resize: none;
+    }
+
+    .doc-editor::placeholder {
+      color: var(--text3);
+    }
+
+    .doc-preview {
+      display: none;
+    }
+
+    .doc-preview.active {
+      display: block;
+    }
+
+    .doc-editor.hidden {
+      display: none;
+    }
+
+    .doc-preview h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px;
+      margin-bottom: 14px;
+      color: var(--accent);
+    }
+
+    .doc-preview h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      margin: 22px 0 10px;
+    }
+
+    .doc-preview h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      margin: 16px 0 7px;
+      color: var(--text2);
+    }
+
+    .doc-preview p {
+      margin-bottom: 12px;
+      line-height: 1.8;
+    }
+
+    .doc-preview code {
+      background: var(--surface2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #e55353;
+      border: 1px solid var(--border);
+    }
+
+    .doc-preview pre {
+      background: var(--surface2);
+      padding: 14px;
+      border-radius: 8px;
+      margin: 12px 0;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    .doc-preview pre code {
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    .doc-preview blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 14px;
+      color: var(--text2);
+      margin: 12px 0;
+    }
+
+    .doc-preview ul,
+    .doc-preview ol {
+      padding-left: 22px;
+      margin-bottom: 12px;
+    }
+
+    .doc-preview li {
+      margin-bottom: 4px;
+      line-height: 1.7;
+    }
+
+    .doc-preview strong {
+      font-weight: 600;
+    }
+
+    .doc-preview a {
+      color: var(--accent);
+    }
+
+    .doc-preview hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 18px 0;
+    }
+
+    .doc-footer {
+      padding: 10px 22px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    /* ── MODALS ── */
+    #name-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #name-modal.open {
+      display: flex;
+    }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(3px);
+    }
+
+    .modal-box {
+      position: relative;
+      z-index: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 26px 28px;
+      width: 360px;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.15);
+      animation: slideUp .18s ease;
+    }
+
+    .modal-box h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .12s;
+    }
+
+    .modal-input:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel {
+      padding: 7px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text2);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .btn-cancel:hover {
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .btn-confirm {
+      padding: 7px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 7px;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .btn-confirm:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ── LOADING OVERLAY ── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9000;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    #loading.hide {
+      display: none;
+    }
+
+    .loading-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .loading-spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(30, 30, 30, 0.9);
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 12px;
+      z-index: 9999;
+      transition: transform .25s ease;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── ZOOM ── */
+    .zoom-controls {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      z-index: 50;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .zoom-btn {
+      width: 22px;
+      height: 22px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background .1s;
+    }
+
+    .zoom-btn:hover {
+      background: var(--surface2);
+    }
+
+    .zoom-label {
+      font-size: 11px;
+      color: var(--text2);
+      min-width: 38px;
+      text-align: center;
+    }
+
+    .minimap {
+      position: absolute;
+      bottom: 18px;
+      right: 18px;
+      width: 140px;
+      height: 84px;
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      overflow: hidden;
+      z-index: 50;
+      pointer-events: none;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .minimap-card {
+      position: absolute;
+      border-radius: 2px;
+      background: var(--accent);
+      opacity: .35;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(16px);
+        opacity: 0
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .35
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOADING -->
+  <div id="loading">
+    <div class="loading-logo">✦ MindCanvas</div>
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- AUTH VIEW -->
+  <div id="auth-view" class="view">
+    <div class="auth-card" id="auth-card">
+      <div class="auth-logo">✦ MindCanvas</div>
+      <div class="auth-tagline">你的私人思維畫布，安全儲存在雲端</div>
+      <div class="auth-error" id="auth-error"></div>
+      <div class="auth-msg" id="auth-msg"></div>
+      <div id="auth-login-form">
+        <label class="auth-label">電子郵件</label>
+        <input class="auth-input" id="auth-email" type="email" placeholder="you@example.com"
+          onkeydown="if(event.key==='Enter')authLogin()">
+        <label class="auth-label">密碼</label>
+        <input class="auth-input" id="auth-password" type="password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter')authLogin()">
+        <button class="auth-btn" onclick="authLogin()">登入</button>
+        <div class="auth-divider">或</div>
+        <button class="auth-google-btn" onclick="authGoogle()">
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+          </svg>
+          使用 Google 登入
+        </button>
+        <div class="auth-switch">還沒有帳號？<a onclick="showRegister()">立即註冊</a></div>
+      </div>
+      <div id="auth-register-form" style="display:none">
+        <label class="auth-label">電子郵件</label>
+        <input class="auth-input" id="reg-email" type="email" placeholder="you@example.com">
+        <label class="auth-label">密碼（至少 6 個字元）</label>
+        <input class="auth-input" id="reg-password" type="password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter')authRegister()">
+        <button class="auth-btn" onclick="authRegister()">建立帳號</button>
+        <div class="auth-switch">已有帳號？<a onclick="showLogin()">返回登入</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="view">
+    <div class="dash-header">
+      <div class="logo">✦ MindCanvas</div>
+      <div class="dash-header-right">
+        <div class="user-chip">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <span id="user-email-display"></span>
+        </div>
+        <button class="btn-signout" onclick="authSignOut()">登出</button>
+        <button class="btn-new" onclick="showNewFileModal()">＋ 新增畫布</button>
+      </div>
+    </div>
+    <div class="dash-body">
+      <div class="dash-title">我的畫布</div>
+      <div class="dash-sub">點擊畫布開始探索，或建立全新的思維地圖</div>
+      <div class="files-grid" id="files-grid"></div>
+    </div>
+  </div>
+
+  <!-- CANVAS VIEW -->
+  <div id="canvas-view" class="view">
+    <div class="canvas-header">
+      <button class="btn-back" onclick="goToDashboard()">← 返回</button>
+      <input class="canvas-file-name" id="canvas-file-name" type="text" value=""
+        onchange="renameCurrentFile(this.value)">
+      <div class="canvas-toolbar">
+        <div class="save-status">
+          <div class="save-dot" id="save-dot"></div>
+          <span id="save-text">已儲存</span>
+        </div>
+        <button class="toolbar-btn" onclick="addCard()">＋ 新增卡片</button>
+        <button class="toolbar-btn" id="connect-btn" onclick="toggleConnectMode()">🔗 連接模式</button>
+      </div>
+    </div>
+    <div class="canvas-container" id="canvas-container">
+      <svg id="canvas-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="canvas-world"></div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="adjustZoom(-0.1)">−</button>
+        <span class="zoom-label" id="zoom-label">100%</span>
+        <button class="zoom-btn" onclick="adjustZoom(0.1)">＋</button>
+        <button class="zoom-btn" onclick="resetZoom()">⊙</button>
+      </div>
+      <div class="minimap">
+        <div id="minimap-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOC MODAL -->
+  <div id="doc-modal">
+    <div class="doc-backdrop" onclick="closeDocModal()"></div>
+    <div class="doc-panel">
+      <div class="doc-header">
+        <input class="doc-title-input" id="doc-title" placeholder="標題..." oninput="onDocTitleInput(this.value)">
+        <div class="doc-tabs">
+          <button class="doc-tab active" onclick="switchDocTab('edit')">編輯</button>
+          <button class="doc-tab" onclick="switchDocTab('preview')">預覽</button>
+        </div>
+        <button class="btn-close-doc" onclick="closeDocModal()">✕</button>
+      </div>
+      <div class="doc-body">
+        <textarea class="doc-editor" id="doc-editor" placeholder="使用 Markdown 格式撰寫詳細內容..."
+          oninput="onDocEdit()"></textarea>
+        <div class="doc-preview" id="doc-preview"></div>
+      </div>
+      <div class="doc-footer">
+        <span id="doc-wordcount">0 字</span>
+        <span>支援 Markdown 格式</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAME MODAL -->
+  <div id="name-modal">
+    <div class="modal-backdrop" onclick="closeNameModal()"></div>
+    <div class="modal-box">
+      <h3>✦ 建立新畫布</h3>
+      <input class="modal-input" id="new-file-name" type="text" placeholder="畫布名稱..." maxlength="50"
+        onkeydown="if(event.key==='Enter')confirmNewFile()">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeNameModal()">取消</button>
+        <button class="btn-confirm" onclick="confirmNewFile()">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTEXT MENU -->
+  <div id="ctx-menu">
+    <div class="ctx-label">卡片顏色</div>
+    <div class="ctx-colors" id="ctx-colors"></div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="ctxOpenDoc()">📄 開啟文件</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item danger" onclick="ctxDeleteCard()">🗑 刪除卡片</div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // ══════════════════════════════════════════
+    //  ⚙️  SUPABASE CONFIG  ← 填入你的資訊
+    // ══════════════════════════════════════════
+    const SUPABASE_URL = 'https://miqmkumnjbsjeushubhe.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_IwtuOnWgDGcYRzNO3cSUnA_al6iA--_';
+    // ══════════════════════════════════════════
+
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ── CARD COLORS ──
+    const CARD_COLORS = [
+      { bg: '#ffffff', border: '#ddddd8' }, { bg: '#fefce8', border: '#fde047' },
+      { bg: '#f0fdf4', border: '#86efac' }, { bg: '#eff6ff', border: '#93c5fd' },
+      { bg: '#fdf4ff', border: '#d8b4fe' }, { bg: '#fff1f2', border: '#fda4af' },
+      { bg: '#fff7ed', border: '#fed7aa' }, { bg: '#f8fafc', border: '#cbd5e1' },
+    ];
+    (function () {
+      const wrap = document.getElementById('ctx-colors');
+      CARD_COLORS.forEach((c, i) => {
+        const sw = document.createElement('div');
+        sw.className = 'ctx-color-swatch';
+        sw.style.cssText = `background:${c.bg};border-color:${c.border}`;
+        sw.onclick = () => ctxSetColor(i);
+        wrap.appendChild(sw);
+      });
+    })();
+
+    // ── STATE ──
+    let currentUser = null;
+    let files = [], cards = {}, connections = {}, cardIdCounter = {};
+    let currentFileId = null;
+    let transform = { x: 0, y: 0, scale: 1 };
+    let isPanning = false, panStart = { x: 0, y: 0 };
+    let draggingCard = null, cardDragStart = {};
+    let connectMode = false, connectDragging = false, connectFromCard = null, connectFromEdge = null;
+    let tempLinePath = null;
+    let editingCardId = null, ctxCardId = null;
+    let saveTimer = null;
+    let resizingCard = null, resizeEl = null, resizeStart = {};
+
+    // ── AUTH UI ──
+    function showLogin() {
+      document.getElementById('auth-login-form').style.display = '';
+      document.getElementById('auth-register-form').style.display = 'none';
+      clearAuthMsg();
+    }
+    function showRegister() {
+      document.getElementById('auth-login-form').style.display = 'none';
+      document.getElementById('auth-register-form').style.display = '';
+      clearAuthMsg();
+    }
+    function showAuthError(msg) { const el = document.getElementById('auth-error'); el.textContent = msg; el.classList.add('show'); }
+    function showAuthMsg(msg) { const el = document.getElementById('auth-msg'); el.textContent = msg; el.classList.add('show'); }
+    function clearAuthMsg() { document.getElementById('auth-error').classList.remove('show'); document.getElementById('auth-msg').classList.remove('show'); }
+
+    async function authLogin() {
+      clearAuthMsg();
+      const email = document.getElementById('auth-email').value.trim();
+      const pass = document.getElementById('auth-password').value;
+      if (!email || !pass) { showAuthError('請輸入電子郵件和密碼'); return; }
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) showAuthError(error.message === 'Invalid login credentials' ? '電子郵件或密碼錯誤' : error.message);
+    }
+    async function authRegister() {
+      clearAuthMsg();
+      const email = document.getElementById('reg-email').value.trim();
+      const pass = document.getElementById('reg-password').value;
+      if (!email || !pass) { showAuthError('請填寫所有欄位'); return; }
+      if (pass.length < 6) { showAuthError('密碼至少需要 6 個字元'); return; }
+      const { error } = await sb.auth.signUp({ email, password: pass });
+      if (error) { showAuthError(error.message); return; }
+      showAuthMsg('✓ 註冊成功！請查看信箱確認帳號，然後回來登入。');
+    }
+    async function authGoogle() {
+      const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+      if (error) showAuthError(error.message);
+    }
+    async function authSignOut() {
+      await sb.auth.signOut();
+      currentUser = null; files = []; cards = {}; connections = {}; cardIdCounter = {};
+      showView('auth-view');
+    }
+
+    // ── AUTH STATE LISTENER ──
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+        updateUserChip();
+        await loadFilesFromCloud();
+        hideLoading();
+        showView('dashboard');
+        renderDashboard();
+      } else {
+        hideLoading();
+        showView('auth-view');
+      }
+    });
+
+    function updateUserChip() {
+      if (!currentUser) return;
+      const email = currentUser.email || '';
+      document.getElementById('user-email-display').textContent = email.length > 20 ? email.slice(0, 18) + '…' : email;
+      document.getElementById('user-avatar').textContent = (email[0] || '?').toUpperCase();
+    }
+
+    // ── LOADING ──
+    function hideLoading() { document.getElementById('loading').classList.add('hide'); }
+
+    // ── CLOUD STORAGE ──
+    // Schema (stored as single JSON per user in Supabase):
+    //   table: mindcanvas_data  columns: id(uuid pk), user_id(uuid), data(jsonb), updated_at(timestamptz)
+
+    async function loadFilesFromCloud() {
+      try {
+        const { data, error } = await sb.from('mindcanvas_data').select('data').eq('user_id', currentUser.id).maybeSingle();
+        if (error) { console.error(error); return; }
+        if (data?.data) {
+          files = data.data.files || [];
+          cards = data.data.cards || {};
+          connections = data.data.connections || {};
+          cardIdCounter = data.data.cardIdCounter || {};
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function saveToCloud() {
+      if (!currentUser) return;
+      setSaveStatus('saving');
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try {
+          const payload = { files, cards, connections, cardIdCounter };
+          const { error } = await sb.from('mindcanvas_data').upsert({ user_id: currentUser.id, data: payload, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+          if (error) throw error;
+          setSaveStatus('saved');
+        } catch (e) { setSaveStatus('error'); showToast('儲存失敗，請檢查網路連線'); console.error(e); }
+      }, 800);
+    }
+    function saveData() { saveToCloud(); }
+
+    // ── DASHBOARD ──
+    function renderDashboard() {
+      const grid = document.getElementById('files-grid');
+      if (!files.length) {
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🗺️</div><h3>還沒有任何畫布</h3><p style="font-size:13px;margin-top:4px">點擊右上角「新增畫布」開始創作</p></div>';
+        return;
+      }
+      grid.innerHTML = files.map(f => {
+        const cc = (cards[f.id] || []).length, cn = (connections[f.id] || []).length;
+        const d = new Date(f.updatedAt).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `<div class="file-card" onclick="openFile('${f.id}')">
+      <div class="file-actions"><button class="btn-icon" onclick="deleteFile(event,'${f.id}')">✕</button></div>
+      <div class="file-icon">🗺️</div>
+      <div class="file-name">${esc(f.name)}</div>
+      <div class="file-meta">更新於 ${d}</div>
+      <div class="file-stats"><span class="file-stat">📌 ${cc} 張</span><span class="file-stat">🔗 ${cn} 條</span></div>
+    </div>`;
+      }).join('');
+    }
+
+    function showNewFileModal() { document.getElementById('name-modal').classList.add('open'); setTimeout(() => document.getElementById('new-file-name').focus(), 50); }
+    function closeNameModal() { document.getElementById('name-modal').classList.remove('open'); document.getElementById('new-file-name').value = ''; }
+    function confirmNewFile() {
+      const name = document.getElementById('new-file-name').value.trim() || '未命名畫布';
+      const id = 'f_' + Date.now();
+      files.unshift({ id, name, createdAt: Date.now(), updatedAt: Date.now() });
+      cards[id] = []; connections[id] = []; cardIdCounter[id] = 0;
+      saveData(); closeNameModal(); renderDashboard(); showToast('畫布已建立 ✦');
+    }
+    function deleteFile(e, id) {
+      e.stopPropagation();
+      if (!confirm('確定要刪除這個畫布？')) return;
+      files = files.filter(f => f.id !== id); delete cards[id]; delete connections[id]; delete cardIdCounter[id];
+      saveData(); renderDashboard(); showToast('已刪除');
+    }
+
+    // ── OPEN FILE ──
+    function openFile(id) {
+      currentFileId = id; transform = { x: 0, y: 0, scale: 1 };
+      connectMode = false; connectDragging = false; connectFromCard = null;
+      document.getElementById('canvas-file-name').value = files.find(f => f.id === id)?.name || '';
+      document.getElementById('connect-btn').classList.remove('active');
+      document.getElementById('connect-btn').textContent = '🔗 連接模式';
+      showView('canvas-view'); renderCanvas(); applyTransform();
+    }
+    function goToDashboard() {
+      if (connectMode) disableConnectMode();
+      currentFileId = null; showView('dashboard'); renderDashboard();
+    }
+    function showView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    function renameCurrentFile(name) {
+      const f = files.find(f => f.id === currentFileId);
+      if (f) { f.name = name || '未命名畫布'; f.updatedAt = Date.now(); saveData(); }
+    }
+
+    // ── CANVAS RENDER ──
+    function renderCanvas() {
+      document.getElementById('canvas-world').innerHTML = '';
+      if (!currentFileId) return;
+      (cards[currentFileId] || []).forEach(renderCard);
+      renderConnections(); updateMinimap();
+    }
+
+    function renderCard(card) {
+      const world = document.getElementById('canvas-world');
+      const colorCfg = CARD_COLORS[card.colorIdx || 0];
+      const el = document.createElement('div');
+      el.className = 'canvas-card' + (card.collapsed ? ' collapsed' : '');
+      el.id = 'card_' + card.id;
+      el.style.left = card.x + 'px'; el.style.top = card.y + 'px';
+      el.style.background = colorCfg.bg; el.style.borderColor = colorCfg.border;
+      if (card.width) el.style.width = card.width + 'px';
+      const bodyMaxH = card.height ? Math.max(40, card.height - 36) : 400;
+
+      el.innerHTML =
+        '<div class="card-title-bar" id="ctb_' + card.id + '">' +
+        '<button class="card-collapse-btn" title="展開/收起" onclick="toggleCardCollapse(\'' + card.id + '\')" onmousedown="event.stopPropagation()">' +
+        '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</button>' +
+        '<input class="card-title-input" id="cti_' + card.id + '" value="' + esc(card.docTitle || '') + '" placeholder="輸入標題..." oninput="onCardTitleInput(\'' + card.id + '\',this.value)" onmousedown="event.stopPropagation()">' +
+        '<button class="card-open-btn" onclick="openDocModal(\'' + card.id + '\')" title="開啟文件">↗</button>' +
+        '</div>' +
+        '<div class="card-content" id="cco_' + card.id + '" style="max-height:' + bodyMaxH + 'px">' +
+        '<textarea class="card-textarea" id="ct_' + card.id + '" placeholder="快速筆記..." oninput="onCardBodyInput(\'' + card.id + '\',this.value)" onmousedown="event.stopPropagation()">' + esc(card.content || '') + '</textarea>' +
+        '</div>' +
+        '<div class="edge-dot top" data-card="' + card.id + '" data-edge="top"></div>' +
+        '<div class="edge-dot bottom" data-card="' + card.id + '" data-edge="bottom"></div>' +
+        '<div class="edge-dot left" data-card="' + card.id + '" data-edge="left"></div>' +
+        '<div class="edge-dot right" data-card="' + card.id + '" data-edge="right"></div>' +
+        '<div class="card-resize-handle" id="crh_' + card.id + '">' +
+        '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><line x1="2" y1="8" x2="8" y2="2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.45"/><line x1="5" y1="8" x2="8" y2="5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.45"/></svg>' +
+        '</div>';
+
+      el.querySelector('#ctb_' + card.id).addEventListener('mousedown', e => {
+        if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
+        e.stopPropagation(); e.preventDefault(); startCardDrag(card, e);
+      });
+      el.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); showCtxMenu(e.clientX, e.clientY, card.id); });
+      el.querySelectorAll('.edge-dot').forEach(dot => {
+        dot.addEventListener('mousedown', e => {
+          if (!connectMode) return;
+          e.stopPropagation(); e.preventDefault();
+          connectDragging = true; connectFromCard = card.id; connectFromEdge = dot.dataset.edge;
+          tempLinePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          tempLinePath.setAttribute('class', 'conn-temp');
+          document.getElementById('canvas-svg').appendChild(tempLinePath);
+        });
+      });
+      el.querySelector('#crh_' + card.id).addEventListener('mousedown', e => { e.stopPropagation(); e.preventDefault(); startCardResize(card, el, e); });
+      world.appendChild(el);
+    }
+
+    // ── COLLAPSE ──
+    function toggleCardCollapse(cardId) {
+      const card = (cards[currentFileId] || []).find(c => c.id === cardId);
+      if (!card) return;
+      card.collapsed = !card.collapsed;
+      document.getElementById('card_' + cardId)?.classList.toggle('collapsed', card.collapsed);
+      setTimeout(() => { renderConnections(); updateMinimap(); }, 230);
+      saveData();
+    }
+
+    // ── CARD DRAG ──
+    function startCardDrag(card, e) {
+      draggingCard = card; cardDragStart = { mx: e.clientX, my: e.clientY, cx: card.x, cy: card.y };
+      document.getElementById('card_' + card.id).style.zIndex = 20;
+      document.addEventListener('mousemove', onCardMove); document.addEventListener('mouseup', onCardUp);
+    }
+    function onCardMove(e) {
+      if (!draggingCard) return;
+      draggingCard.x = cardDragStart.cx + (e.clientX - cardDragStart.mx) / transform.scale;
+      draggingCard.y = cardDragStart.cy + (e.clientY - cardDragStart.my) / transform.scale;
+      const el = document.getElementById('card_' + draggingCard.id);
+      if (el) { el.style.left = draggingCard.x + 'px'; el.style.top = draggingCard.y + 'px'; }
+      renderConnections(); updateMinimap();
+    }
+    function onCardUp() {
+      if (!draggingCard) return;
+      document.getElementById('card_' + draggingCard.id).style.zIndex = '';
+      draggingCard = null;
+      document.removeEventListener('mousemove', onCardMove); document.removeEventListener('mouseup', onCardUp);
+      saveData();
+    }
+
+    // ── RESIZE ──
+    function startCardResize(card, el, e) {
+      resizingCard = card; resizeEl = el;
+      resizeStart = { mx: e.clientX, my: e.clientY, w: card.width || el.offsetWidth, h: card.height || el.offsetHeight };
+      document.addEventListener('mousemove', onResizeMove); document.addEventListener('mouseup', onResizeUp);
+    }
+    function onResizeMove(e) {
+      if (!resizingCard || !resizeEl) return;
+      const dx = (e.clientX - resizeStart.mx) / transform.scale, dy = (e.clientY - resizeStart.my) / transform.scale;
+      const nw = Math.max(160, resizeStart.w + dx), nh = Math.max(80, resizeStart.h + dy);
+      resizeEl.style.width = nw + 'px';
+      const ba = resizeEl.querySelector('.card-content');
+      if (ba && !resizingCard.collapsed) ba.style.maxHeight = Math.max(40, nh - 36) + 'px';
+      renderConnections(); updateMinimap();
+    }
+    function onResizeUp() {
+      if (!resizingCard || !resizeEl) return;
+      resizingCard.width = resizeEl.offsetWidth; resizingCard.height = resizeEl.offsetHeight;
+      resizingCard = null; resizeEl = null;
+      document.removeEventListener('mousemove', onResizeMove); document.removeEventListener('mouseup', onResizeUp);
+      saveData();
+    }
+
+    // ── CARD INPUTS ──
+    function onCardTitleInput(cardId, val) { const c = (cards[currentFileId] || []).find(c => c.id === cardId); if (c) { c.docTitle = val; saveData(); } }
+    function onCardBodyInput(cardId, val) { const c = (cards[currentFileId] || []).find(c => c.id === cardId); if (c) { c.content = val; saveData(); } }
+
+    // ── ADD CARD ──
+    function addCard() {
+      if (!currentFileId) return;
+      if (!cardIdCounter[currentFileId]) cardIdCounter[currentFileId] = 0;
+      cardIdCounter[currentFileId]++;
+      const id = 'c_' + currentFileId + '_' + cardIdCounter[currentFileId];
+      const cx = (-transform.x + window.innerWidth / 2 - 100) / transform.scale;
+      const cy = (-transform.y + window.innerHeight / 2 - 60) / transform.scale;
+      const card = { id, x: cx + (Math.random() - .5) * 120, y: cy + (Math.random() - .5) * 80, content: '', docTitle: '', docContent: '', colorIdx: 0 };
+      cards[currentFileId].push(card);
+      renderCard(card);
+      if (connectMode) document.getElementById('card_' + id)?.classList.add('show-dots');
+      updateMinimap(); saveData();
+      setTimeout(() => { document.getElementById('cti_' + id)?.focus(); }, 50);
+    }
+
+    // ── CONNECTIONS ──
+    function getCardWidth(cardId) { const c = (cards[currentFileId] || []).find(c => c.id === cardId); if (c?.width) return c.width; return document.getElementById('card_' + cardId)?.offsetWidth || 200; }
+    function getCardHeight(cardId) { return document.getElementById('card_' + cardId)?.offsetHeight || 120; }
+    function getEdgePoint(card, edge) {
+      const W = getCardWidth(card.id), H = getCardHeight(card.id);
+      if (edge === 'top') return { x: card.x + W / 2, y: card.y };
+      if (edge === 'bottom') return { x: card.x + W / 2, y: card.y + H };
+      if (edge === 'left') return { x: card.x, y: card.y + H / 2 };
+      if (edge === 'right') return { x: card.x + W, y: card.y + H / 2 };
+      return { x: card.x + W / 2, y: card.y + H / 2 };
+    }
+    function closestEdge(card, pt) {
+      const W = getCardWidth(card.id), H = getCardHeight(card.id);
+      const pts = { top: { x: card.x + W / 2, y: card.y }, bottom: { x: card.x + W / 2, y: card.y + H }, left: { x: card.x, y: card.y + H / 2 }, right: { x: card.x + W, y: card.y + H / 2 } };
+      let best = 'right', bestD = Infinity;
+      for (const [e, p] of Object.entries(pts)) { const d = Math.hypot(p.x - pt.x, p.y - pt.y); if (d < bestD) { bestD = d; best = e; } }
+      return best;
+    }
+    function renderConnections() {
+      document.getElementById('canvas-svg').querySelectorAll('.conn-line').forEach(l => l.remove());
+      if (!currentFileId) return;
+      (connections[currentFileId] || []).forEach(conn => {
+        const fc = (cards[currentFileId] || []).find(c => c.id === conn.from);
+        const tc = (cards[currentFileId] || []).find(c => c.id === conn.to);
+        if (!fc || !tc) return;
+        drawCurve(getEdgePoint(fc, conn.fromEdge || 'right'), getEdgePoint(tc, conn.toEdge || 'left'), conn.id);
+      });
+    }
+    function drawCurve(fp, tp, connId) {
+      const svg = document.getElementById('canvas-svg');
+      const fx = fp.x * transform.scale + transform.x, fy = fp.y * transform.scale + transform.y;
+      const tx = tp.x * transform.scale + transform.x, ty = tp.y * transform.scale + transform.y;
+      const dx = tx - fx;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M${fx},${fy} C${fx + dx * .45},${fy} ${tx - dx * .45},${ty} ${tx},${ty}`);
+      path.setAttribute('class', 'conn-line');
+      if (connId) {
+        path.dataset.conn = connId;
+        path.addEventListener('contextmenu', e => {
+          e.preventDefault(); e.stopPropagation();
+          if (confirm('刪除這條連線？')) { connections[currentFileId] = connections[currentFileId].filter(c => c.id !== connId); saveData(); renderConnections(); showToast('連線已刪除'); }
+        });
+      }
+      svg.appendChild(path);
+    }
+
+    // ── CONNECT MODE ──
+    function toggleConnectMode() {
+      connectMode = !connectMode;
+      if (connectMode) {
+        document.getElementById('connect-btn').classList.add('active');
+        document.getElementById('connect-btn').textContent = '✕ 退出連接';
+        document.getElementById('canvas-container').classList.add('connect-mode');
+        document.querySelectorAll('.canvas-card').forEach(el => el.classList.add('show-dots'));
+        showToast('拖曳邊緣的連接點 → 放到目標卡片上');
+      } else disableConnectMode();
+    }
+    function disableConnectMode() {
+      connectMode = false; connectDragging = false; connectFromCard = null;
+      document.getElementById('connect-btn').classList.remove('active');
+      document.getElementById('connect-btn').textContent = '🔗 連接模式';
+      document.getElementById('canvas-container').classList.remove('connect-mode');
+      document.querySelectorAll('.canvas-card').forEach(el => el.classList.remove('show-dots'));
+      if (tempLinePath) { tempLinePath.remove(); tempLinePath = null; }
+    }
+
+    // ── GLOBAL MOUSE ──
+    document.addEventListener('mousemove', e => {
+      if (isPanning) { transform.x = e.clientX - panStart.x; transform.y = e.clientY - panStart.y; applyTransform(); renderConnections(); updateMinimap(); return; }
+      if (connectDragging && connectFromCard && tempLinePath) {
+        const fc = (cards[currentFileId] || []).find(c => c.id === connectFromCard); if (!fc) return;
+        const fp = getEdgePoint(fc, connectFromEdge);
+        const fx = fp.x * transform.scale + transform.x, fy = fp.y * transform.scale + transform.y;
+        const dx = e.clientX - fx, dy = e.clientY - fy;
+        tempLinePath.setAttribute('d', `M${fx},${fy} C${fx + dx * .45},${fy} ${e.clientX - dx * .45},${e.clientY} ${e.clientX},${e.clientY}`);
+      }
+    });
+    document.addEventListener('mouseup', e => {
+      if (connectDragging) {
+        const r = document.getElementById('canvas-container').getBoundingClientRect();
+        const wx = (e.clientX - r.left - transform.x) / transform.scale, wy = (e.clientY - r.top - transform.y) / transform.scale;
+        const target = (cards[currentFileId] || []).find(c => wx >= c.x && wx <= c.x + getCardWidth(c.id) && wy >= c.y && wy <= c.y + getCardHeight(c.id));
+        if (target && target.id !== connectFromCard) {
+          const dup = (connections[currentFileId] || []).find(c => (c.from === connectFromCard && c.to === target.id) || (c.from === target.id && c.to === connectFromCard));
+          if (!dup) { const toEdge = closestEdge(target, { x: wx, y: wy }); connections[currentFileId].push({ id: 'conn_' + Date.now(), from: connectFromCard, to: target.id, fromEdge: connectFromEdge, toEdge }); saveData(); renderConnections(); showToast('連線已建立 🔗'); }
+          else showToast('連線已存在');
+        }
+        connectDragging = false; connectFromCard = null;
+        if (tempLinePath) { tempLinePath.remove(); tempLinePath = null; }
+      }
+    });
+
+    // ── CANVAS PAN / ZOOM ──
+    const canvasContainer = document.getElementById('canvas-container');
+    canvasContainer.addEventListener('mousedown', e => {
+      if (e.target.closest('.canvas-card') || e.target.closest('.zoom-controls') || e.target.closest('.minimap')) return;
+      if (connectMode) return;
+      isPanning = true; panStart = { x: e.clientX - transform.x, y: e.clientY - transform.y }; canvasContainer.classList.add('grabbing');
+    });
+    document.addEventListener('mouseup', () => { if (isPanning) { isPanning = false; canvasContainer.classList.remove('grabbing'); } });
+    canvasContainer.addEventListener('wheel', e => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.08 : 0.08, rect = canvasContainer.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const ns = Math.max(0.2, Math.min(3, transform.scale + delta)), r = ns / transform.scale;
+      transform.x = mx - (mx - transform.x) * r; transform.y = my - (my - transform.y) * r; transform.scale = ns;
+      applyTransform(); renderConnections(); updateMinimap();
+    }, { passive: false });
+    function applyTransform() { document.getElementById('canvas-world').style.transform = `translate(${transform.x}px,${transform.y}px) scale(${transform.scale})`; document.getElementById('zoom-label').textContent = Math.round(transform.scale * 100) + '%'; }
+    function adjustZoom(d) { const ns = Math.max(0.2, Math.min(3, transform.scale + d)), c = canvasContainer.getBoundingClientRect(), r = ns / transform.scale; transform.x = c.width / 2 - (c.width / 2 - transform.x) * r; transform.y = c.height / 2 - (c.height / 2 - transform.y) * r; transform.scale = ns; applyTransform(); renderConnections(); updateMinimap(); }
+    function resetZoom() { transform = { x: 0, y: 0, scale: 1 }; applyTransform(); renderConnections(); updateMinimap(); }
+
+    // ── MINIMAP ──
+    function updateMinimap() {
+      const mm = document.getElementById('minimap-content'); if (!currentFileId) return;
+      const arr = cards[currentFileId] || []; if (!arr.length) { mm.innerHTML = ''; return; }
+      const minX = Math.min(...arr.map(c => c.x)), maxX = Math.max(...arr.map(c => c.x + (c.width || 200)));
+      const minY = Math.min(...arr.map(c => c.y)), maxY = Math.max(...arr.map(c => c.y + 130));
+      const s = Math.min(140 / Math.max(maxX - minX, 1), 84 / Math.max(maxY - minY, 1)) * .85;
+      mm.innerHTML = arr.map(c => { const x = (c.x - minX) * s + 4, y = (c.y - minY) * s + 4; return `<div class="minimap-card" style="left:${x}px;top:${y}px;width:${(c.width || 200) * s}px;height:${40 * s}px"></div>`; }).join('');
+    }
+
+    // ── CONTEXT MENU ──
+    function showCtxMenu(x, y, cardId) {
+      hideCtxMenu(); ctxCardId = cardId;
+      const menu = document.getElementById('ctx-menu'); menu.style.left = x + 'px'; menu.style.top = y + 'px'; menu.classList.add('open');
+      const card = (cards[currentFileId] || []).find(c => c.id === cardId);
+      menu.querySelectorAll('.ctx-color-swatch').forEach((sw, i) => sw.classList.toggle('active', i === (card?.colorIdx || 0)));
+      requestAnimationFrame(() => { const r = menu.getBoundingClientRect(); if (r.right > window.innerWidth) menu.style.left = (x - r.width) + 'px'; if (r.bottom > window.innerHeight) menu.style.top = (y - r.height) + 'px'; });
+    }
+    function hideCtxMenu() { document.getElementById('ctx-menu').classList.remove('open'); ctxCardId = null; }
+    document.addEventListener('click', e => { if (!e.target.closest('#ctx-menu')) hideCtxMenu(); });
+    function ctxSetColor(idx) {
+      const card = (cards[currentFileId] || []).find(c => c.id === ctxCardId); if (!card) return;
+      card.colorIdx = idx; const el = document.getElementById('card_' + ctxCardId);
+      if (el) { const c = CARD_COLORS[idx]; el.style.background = c.bg; el.style.borderColor = c.border; }
+      saveData(); hideCtxMenu();
+    }
+    function ctxOpenDoc() { const id = ctxCardId; hideCtxMenu(); openDocModal(id); }
+    function ctxDeleteCard() {
+      if (!ctxCardId || !currentFileId) return;
+      const id = ctxCardId; hideCtxMenu();
+      if (!confirm('確定刪除這張卡片？')) return;
+      cards[currentFileId] = cards[currentFileId].filter(c => c.id !== id);
+      connections[currentFileId] = connections[currentFileId].filter(c => c.from !== id && c.to !== id);
+      document.getElementById('card_' + id)?.remove();
+      renderConnections(); updateMinimap(); saveData(); showToast('卡片已刪除');
+    }
+
+    // ── DOC MODAL ──
+    function openDocModal(cardId) {
+      const card = (cards[currentFileId] || []).find(c => c.id === cardId); if (!card) return;
+      editingCardId = cardId;
+      document.getElementById('doc-title').value = card.docTitle || '';
+      document.getElementById('doc-editor').value = card.docContent || '';
+      updateDocWC(); switchDocTab('edit');
+      document.getElementById('doc-modal').classList.add('open');
+      setTimeout(() => document.getElementById('doc-editor').focus(), 60);
+    }
+    function closeDocModal() { document.getElementById('doc-modal').classList.remove('open'); editingCardId = null; }
+    function onDocTitleInput(val) {
+      const card = (cards[currentFileId] || []).find(c => c.id === editingCardId); if (!card) return;
+      card.docTitle = val; const ti = document.getElementById('cti_' + editingCardId); if (ti) ti.value = val; saveData();
+    }
+    function onDocEdit() {
+      const val = document.getElementById('doc-editor').value; updateDocWC();
+      const card = (cards[currentFileId] || []).find(c => c.id === editingCardId); if (card) { card.docContent = val; saveData(); }
+    }
+    function updateDocWC() { const v = document.getElementById('doc-editor').value; document.getElementById('doc-wordcount').textContent = (v.trim() ? v.trim().split(/[\s\n]+/).filter(Boolean).length : 0) + ' 字'; }
+    function switchDocTab(tab) {
+      document.querySelectorAll('.doc-tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && tab === 'edit') || (i === 1 && tab === 'preview')));
+      const ed = document.getElementById('doc-editor'), pv = document.getElementById('doc-preview');
+      if (tab === 'edit') { ed.classList.remove('hidden'); pv.classList.remove('active'); }
+      else { ed.classList.add('hidden'); pv.classList.add('active'); pv.innerHTML = marked.parse(ed.value || ''); }
+    }
+
+    // ── SAVE STATUS ──
+    function setSaveStatus(s) {
+      const dot = document.getElementById('save-dot'), txt = document.getElementById('save-text');
+      if (s === 'saving') { dot.classList.add('saving'); txt.textContent = '儲存中...'; dot.style.background = ''; }
+      else if (s === 'error') { dot.classList.remove('saving'); txt.textContent = '儲存失敗'; dot.style.background = '#e55353'; }
+      else { dot.classList.remove('saving'); txt.textContent = '已儲存'; dot.style.background = ''; }
+    }
+
+    // ── UTILS ──
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2200); }
+
+    // ── KEYBOARD ──
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('doc-modal').classList.contains('open')) closeDocModal();
+        else if (connectMode) disableConnectMode();
+        else if (document.getElementById('name-modal').classList.contains('open')) closeNameModal();
+        hideCtxMenu();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n' && document.getElementById('dashboard').classList.contains('active')) { e.preventDefault(); showNewFileModal(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && document.getElementById('canvas-view').classList.contains('active')) { e.preventDefault(); addCard(); }
+    });
+  </script>
+</body>
+
+</html>
